@@ -82,7 +82,9 @@ class TensorBackend:
         self.eq_zip = ops.zip(operators.eq)
         self.is_close_zip = ops.zip(operators.is_close)
         self.relu_back_zip = ops.zip(operators.relu_back)
+        self.sigmoid_back_zip = ops.zip(operators.sigmoid_back)
         self.log_back_zip = ops.zip(operators.log_back)
+        self.exp_back_zip = ops.zip(operators.exp_back)
         self.inv_back_zip = ops.zip(operators.inv_back)
 
         # Reduce
@@ -264,8 +266,13 @@ def tensor_map(
         in_shape: Shape,
         in_strides: Strides,
     ) -> None:
-        # TODO: Implement for Task 2.3.
-        raise NotImplementedError('Need to implement for Task 2.3')
+        out_index = np.zeros(len(out_shape))
+        in_index = np.zeros(len(in_shape))
+        for i in range(len(out)):
+            to_index(i, out_shape, out_index)
+            broadcast_index(out_index, out_shape, in_shape, in_index)
+            in_pos = index_to_position(in_index, in_strides)
+            out[i] = fn(in_storage[in_pos])
 
     return _map
 
@@ -309,8 +316,16 @@ def tensor_zip(
         b_shape: Shape,
         b_strides: Strides,
     ) -> None:
-        # TODO: Implement for Task 2.3.
-        raise NotImplementedError('Need to implement for Task 2.3')
+        out_index = np.zeros(len(out_shape))
+        a_index = np.zeros(len(a_shape))
+        b_index = np.zeros(len(b_shape))
+        for i in range(len(out)):
+            to_index(i, out_shape, out_index)
+            broadcast_index(out_index, out_shape, a_shape, a_index)
+            broadcast_index(out_index, out_shape, b_shape, b_index)
+            a_pos = index_to_position(a_index, a_strides)
+            b_pos = index_to_position(b_index, b_strides)
+            out[i] = fn(a_storage[a_pos], b_storage[b_pos])
 
     return _zip
 
@@ -340,9 +355,18 @@ def tensor_reduce(
         a_strides: Strides,
         reduce_dim: int,
     ) -> None:
-        # TODO: Implement for Task 2.3.
-        raise NotImplementedError('Need to implement for Task 2.3')
-
+        o_idx = np.zeros(len(out_shape))
+        i_idx = np.zeros(len(a_shape))
+        for oi in range(len(out)):
+            to_index(oi, out_shape, o_idx)
+            i_idx[:] = o_idx
+            acc = a_storage[index_to_position(i_idx, a_strides)]
+            for k in range(1, int(a_shape[reduce_dim])):
+                i_idx[reduce_dim] = k
+                val = a_storage[index_to_position(i_idx, a_strides)]
+                acc = fn(acc, val)
+                
+            out[oi] = acc
     return _reduce
 
 
